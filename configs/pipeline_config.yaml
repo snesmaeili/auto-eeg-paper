@@ -1,0 +1,11 @@
+bids_root: "/data/BIDS_dataset"
+notebooks:
+  - "notebooks/01_gonogo_minimal_preprocessing.ipynb"
+  - "notebooks/02_gonogo_intermediate_preprocessing.ipynb"
+ai:
+  model: "gpt-4.1"
+  schema: "templates/manuscript_schema.py"
+  prompts: "configs/ai_prompts.yaml"
+output:
+  results_dir: "results"
+  manuscript_md: "paper/draft.md"

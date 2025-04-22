@@ -1,0 +1,195 @@
+# AI prompt templates for each manuscript section.
+# Use {results} to inject processed notebook outputs.
+
+# 1. High‑level manuscript generation: given structured results, produce JSON matching the Paper schema
+manuscript_generation: |
+  You are an expert neuroscience writer tasked with drafting a fully self‑contained scientific manuscript
+  based on automated EEG analysis outputs. The input is a JSON object capturing:
+  - Notebook names and cell outputs (text summaries, key metrics, paths to figures)  
+  - Preprocessing steps, feature‑extraction details, statistical results  
+  - Figures with captions and paths  
+
+  Produce a JSON document conforming exactly to this Pydantic schema:
+
+  ```python
+  class ResultSection(BaseModel):
+      title: str                # e.g. "ERP Waveform Analysis"
+      text: str                 # 2–4 concise paragraphs interpreting the results
+      figures: List[str]        # list of figure paths, e.g. ["results/figures/01/ cell_2.png"]
+  class Paper(BaseModel):
+      title: str
+      introduction: str
+      methods: str
+      results: List[ResultSection]
+      discussion: str
+      references: List[str]     # BibTeX entries or numbered citation strings
+  ```
+
+  INSTRUCTIONS:
+  1. Title: Create a concise, specific title that accurately reflects the EEG study's focus
+  2. Introduction: 
+     - Provide context on EEG analysis and its importance in neuroscience
+     - Present clear research questions/hypotheses based on the results
+     - 2-3 paragraphs total
+     
+  3. Methods:
+     - Describe data acquisition and preprocessing in detail
+     - Explain feature extraction techniques and analysis approaches
+     - Specify statistical methods applied
+     - Document any machine learning approaches if used
+     
+  4. Results:
+     - Create multiple ResultSection objects, one for each major finding
+     - Each section should have a descriptive title, explanatory text, and relevant figures
+     - Interpret figures and statistics accurately
+     - Connect findings to the research questions
+     
+  5. Discussion:
+     - Summarize key findings
+     - Explain their significance and implications
+     - Address limitations of the current approach
+     - Suggest future research directions
+     
+  6. References:
+     - Include relevant citations following standard academic format
+     - Prefer recent papers (last 5 years) for methodology
+     - Include seminal papers for theoretical background
+
+  Your JSON output should be valid, complete, and ready for direct use in manuscript generation.
+  The results data is provided here: {results}
+
+# Section-specific prompts for per-section generation
+title_prompt: |
+  Given these EEG analysis results, create a concise, descriptive title for a scientific paper.
+  The title should be specific, accurately reflecting the focus of the EEG study, and 
+  approximately 10-15 words long. Do not use a colon or subtitle format unless necessary.
+  
+  Analyze the results first to identify key methods, findings, and the focus of the study,
+  then craft a title that would appeal to the neuroscience community.
+  
+  Results data: {results}
+
+introduction_prompt: |
+  Draft the Introduction section for an EEG analysis paper based on these results:
+  {results}
+  
+  Your introduction should:
+  1. Begin with broad context on EEG analysis in neuroscience (1 paragraph)
+  2. Narrow down to the specific area relevant to these results
+  3. Clearly state the research questions/hypotheses that guided this analysis
+  4. Briefly outline the approach taken
+  5. End with a transition sentence to the methods
+  
+  Write 2-3 well-structured paragraphs with scientific language appropriate for a neuroscience journal.
+  Do not include citations in numeric format - just mention authors by name if needed (e.g., "As demonstrated by Smith et al.").
+
+methods_prompt: |
+  Write the Methods section for an EEG analysis paper based on these results:
+  {results}
+  
+  Your methods section should describe:
+  1. Data acquisition setup and parameters
+  2. Preprocessing steps with specific parameters
+  3. Feature extraction techniques applied to the EEG data
+  4. Analysis approaches and algorithms
+  5. Statistical methods used for significance testing
+  6. Any classification or machine learning methods if applicable
+  
+  Be precise about parameters, filters, and algorithms. Provide enough detail for replication.
+  Write in past tense, passive voice as is standard for methods sections.
+  Do not include citations in numeric format - just mention technique names directly.
+
+results_prompt: |
+  Based on the provided EEG analysis results, generate multiple result sections as JSON.
+  Return ONLY a JSON array containing ResultSection objects following this exact structure:
+  
+  [
+    {
+      "title": "Section Title",
+      "text": "2-4 paragraphs interpreting results...",
+      "figures": ["path/to/figure1.png", "path/to/figure2.png"]
+    },
+    ...more sections...
+  ]
+  
+  For each major finding in the results:
+  1. Create a descriptive title that indicates what was found
+  2. Write 2-4 paragraphs explaining and interpreting the results
+  3. Reference the appropriate figures from the input data
+  4. Describe statistical significance and patterns observed
+  
+  The figures array should contain exact paths from the results data.
+  Ensure your response is valid JSON that can be parsed directly.
+  
+  Results data: {results}
+
+discussion_prompt: |
+  Write the Discussion section for an EEG analysis paper based on these results:
+  {results}
+  
+  Your discussion should:
+  1. Begin by summarizing the key findings without merely repeating results
+  2. Interpret these findings in the context of existing neuroscience literature
+  3. Explain potential mechanisms behind the observed effects
+  4. Address limitations of the current approach and analysis
+  5. Suggest future research directions
+  6. End with a brief conclusion paragraph stating the broader impact
+  
+  Write 3-5 well-structured paragraphs. Be thoughtful about implications and limitations.
+  Do not include citations in numeric format - just mention authors by name if needed.
+
+references_prompt: |
+  Generate a list of references for an EEG analysis paper based on these methods and results:
+  {results}
+  
+  Your response should be ONLY a JSON array of strings. Each string should be one complete reference 
+  in a standard academic format (similar to APA or similar). For example:
+  
+  [
+    "Smith, J., & Jones, L. (2022). EEG analysis methods for cognitive neuroscience. Journal of Neuroscience Methods, 365, 109-121.",
+    "Additional references..."
+  ]
+  
+  Include approximately 15-25 references covering:
+  - Recent methodology papers for EEG analysis (last 5 years)
+  - Foundational/seminal papers for theoretical background
+  - Studies using similar approaches or investigating related phenomena
+  - Tool/algorithm papers for any specialized methods mentioned
+  
+  Ensure your response is valid JSON that can be parsed directly.
+
+# 7. Image caption adjustment (optional)
+figure_caption_prompt: |
+  Review this figure path and proposed caption, then refine the caption to be concise but informative:
+  - Path: {figure_path}
+  - Current caption: "{current_caption}"
+
+  Explain improvements in one short sentence (Markdown).
+
+# 8. Vision-language model review prompt
+vlm_review: |
+  You will be given:
+  - A local file path to a scientific figure image: `{image}`
+  - Its current draft caption: "{caption}"
+
+  1. Describe in one sentence what the figure shows.
+  2. Does the draft caption accurately describe the figure? (yes/no)
+  3. If not, provide a corrected caption in one sentence.
+  4. Are there any missing labels or legends? If so, specify how to fix them.
+  5. Rate the overall clarity: {Poor, Acceptable, Excellent}
+
+  **Respond in JSON only**, with keys:
+  {
+    "description": "...",
+    "caption_ok": true,
+    "suggested_caption": "...",
+    "legend_issues": "...",
+    "clarity": "Excellent"
+  }
+
+# 9. Executive summary (optional)
+summary_prompt: |
+  Summarize the entire paper—title, key methods, major results, and implications—into a
+  150‑word abstract that could serve as a journal submission abstract. Do NOT reference figures.
+
+  Respond in one continuous Markdown paragraph.
